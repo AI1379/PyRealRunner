@@ -85,12 +85,13 @@ def bd09_to_wgs84(p: Dict[str, float]) -> Dict[str, float]:
 class Route:
     def __init__(self, path: List[Dict[str, float]] = []):
         self.path = deepcopy(path)
+        self.original_path = deepcopy(path)
         if len(self.path) > 0:
             self.path.append(self.path[0])  # Close the loop
         self.run_path = self.path
-        self.center = self.center()
+        self.center = self.calc_center()
 
-    def center(self):
+    def calc_center(self):
         if len(self.path) == 0:
             return {"lat": 0, "lng": 0}
         lat = 0
@@ -99,6 +100,9 @@ class Route:
             lat += p['lat']
             lng += p['lng']
         return {"lat": lat / len(self.path), "lng": lng / len(self.path)}
+
+    def reset(self):
+        self.path = deepcopy(self.original_path)
 
     def extent_path(self, dx: float):
         if len(self.path) == 0:
@@ -117,8 +121,9 @@ class Route:
             result.append(b.copy())
         self.path = result
         self.run_path = self.path
+        self.center = self.calc_center()
 
-    def randomize_path(self, factor: float, sigma: float = 1.0):
+    def randomize_path(self, factor: float = 0.2, sigma: float = 1.0):
         self.run_path = deepcopy(self.path)
         seed = random.SystemRandom().getrandbits(32)
         random.seed(seed)
@@ -137,3 +142,14 @@ class Route:
                     continue
                 pt['lat'] += dlat * offset * smooth(start, end, j) / dis
                 pt['lng'] += dlng * offset * smooth(start, end, j) / dis
+
+    def generate_path(self, **kwargs):
+        self.reset()
+        v = kwargs.get("v", 3.0)
+        dt = kwargs.get("dt", 0.2)
+        self.extent_path(v * dt)
+        self.randomize_path(
+            kwargs.get("factor", 0.2),
+            kwargs.get("sigma", 1.0)
+        )
+        pass
