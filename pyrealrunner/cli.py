@@ -38,13 +38,15 @@ def exec(config_arg: str):
 
     print(f"Running with config: {config}")
     loop_set_debug(asyncio.get_event_loop())
-    dev.start_tunnel()
-    print("Tunnel started")
     try:
+        dev.start_tunnel()
+        print("Running main coroutine")
         asyncio.run(run(route, dev, loop_cnt, v, dt))
     except Exception as ex:
         print(f"Exception caught in main coroutine: {ex}")
         raise
+    finally:
+        asyncio.get_event_loop().stop()
 
 
 def main(args):

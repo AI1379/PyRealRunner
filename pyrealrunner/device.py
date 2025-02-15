@@ -11,7 +11,9 @@ from pymobiledevice3.services.dvt.dvt_secure_socket_proxy import DvtSecureSocket
 from pymobiledevice3.services.dvt.instruments.location_simulation import LocationSimulation
 from pymobiledevice3.exceptions import InvalidServiceError
 from multiprocessing import Queue
-from .util import thread_with_future
+from .util import thread_with_future, async_run_in_thread
+import traceback
+import sys
 import asyncio
 
 
@@ -54,19 +56,20 @@ class Device:
         AmfiService(self.lockdown).reveal_developer_mode_option_in_ui()
 
     async def start_tunnel_exec(self):
+        # TODO: Try to move the CoreDeviceTunnelProxy to synchronous context
         try:
             service = CoreDeviceTunnelProxy(self.lockdown)
             async with start_tunnel(service, protocol=TunnelProtocol.TCP) as res:
                 print("Tunnel started")
                 self._queue.put((res.address, res.port))
                 await res.client.wait_closed()
+                print("Tunnel closed")
         except asyncio.CancelledError:
-            print("Tunnel was closed")
+            print("Tunnel was closed by asyncio")
 
     def start_tunnel(self):
         @thread_with_future(name=f"{self.name}-Tunnel")
         async def _start_tunnel():
-            asyncio.to_thread
             await self.start_tunnel_exec()
 
         future = _start_tunnel()
@@ -76,11 +79,11 @@ class Device:
             self.set_rsd(conn)
         except Exception as ex:
             print(f"Exception occurred! {ex}")
-            raise
+            traceback.print_exc()
         finally:
             return future
 
-    def set_rsd(self, conn):
+    def set_rsd(self, conn: tuple[str, int]):
         rsd = RemoteServiceDiscoveryService(conn)
         asyncio.run(rsd.connect(), debug=True)
         self.service_provider = rsd
