@@ -23,6 +23,8 @@ async def run(route: Route, device: Device, loop_cnt: int = 5, v=3.0, dt=0.2, si
             await run_loop(route, device, v, dt, sigma)
         except InvalidServiceError:
             print("Invalid Service in running loop")
+        except KeyboardInterrupt:
+            print("Keyboard Interrupt in running loop")
         finally:
             print("Clear location simulation")
             device.clear_location()
